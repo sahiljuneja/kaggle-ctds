@@ -2,18 +2,6 @@ import pandas as pd
 import numpy as np
 from youtube_dl import YoutubeDL
 
-def clean_data(file_path):
-
-    episodes = pd.read_csv(file_path)
-
-    episodes["youtube_url"][80] = "https://www.youtube.com/watch?v=2dpaSTWdhSk"
-    episodes["youtube_url"][81] = "https://www.youtube.com/watch?v=iNZd_5T8tCI"
-    episodes["youtube_url"][82] = "https://www.youtube.com/watch?v=VeM1T7UaYTk"
-    episodes["youtube_url"][83] = "https://www.youtube.com/watch?v=aC9t9D7HpYE"
-    episodes["youtube_url"][84] = "https://www.youtube.com/watch?v=tq_XcFubgKo"
-    
-    return episodes
-
 
 def download_audio_data(dataframe, save_path):
     
@@ -36,9 +24,9 @@ def download_audio_data(dataframe, save_path):
 
             ydl = YoutubeDL(ydl_opts)
             ydl.download([url])
-        
 
-        
+            
+
 if __name__ == "__main__":
     
     # arguments parser
@@ -56,7 +44,7 @@ if __name__ == "__main__":
     save_path = args["save"]    
     
     # clean urls if needed
-    data_df = clean_data(data_file)
+    data_df = pd.read_csv(file_path)
     if args["audio"]:
-        download_audio_data(data_file, save_path)
+        download_audio_data(data_df, save_path)
 
