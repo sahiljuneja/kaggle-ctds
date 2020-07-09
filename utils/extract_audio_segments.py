@@ -11,25 +11,29 @@ import time
 
 
 def extract_data(input_path, save_path, data_path):
-    
+    import time
     path = os.listdir(input_path)
     for file in path:
-        
+        print("Starting on: ", file)
         episode_num = int(file.split('.mp3')[0])
         
-        # account for non-interview episodes and missing E4 subtitles
-        if (episode_num > 45 and episode_num < 55) or episode_num == 4:
+        # account for non-interview episodes and missing E4 subtitles and E46
+        if (episode_num > 45 and episode_num < 56) or (episode_num == 4):
             continue
-        elif episode_num > 54:
+        elif episode_num > 55:
             episode_num = episode_num - 9
         episode_transcript = pd.read_csv(data_path + "E" + str(episode_num) + ".csv")
-        print("Loaded Transcript for Episode {}".format(episode_num))
+        audio_start_time = time.time()
         episode_audio = AudioSegment.from_mp3(input_path + file)
-        print("Loaded Audio for Episode {}".format(episode_num))
-        for idx, time in enumerate(episode_transcript["Time"][:-1]):
-            
-            fig_save_path = save_path + str(episode_num) + "_" + str(idx) + ".jpeg"
+        print("Time to Load mp3: ", time.time() - audio_start_time)
+        
+        total_time = time.time()
+        count = 0
+        for idx, time2 in enumerate(episode_transcript["Time"][:-2]):
+            idx += 1
+            fig_save_path = save_path + str(episode_num) + "_" + str(idx) + ".png"
             if not os.path.isfile(fig_save_path):
+                clip_time = time.time()
 
                 start_minutes = int(episode_transcript.loc[idx, "Time"].split(":")[0])
                 start_seconds = int(episode_transcript.loc[idx, "Time"].split(":")[1])
@@ -40,22 +44,30 @@ def extract_data(input_path, save_path, data_path):
                 start_time = (start_minutes*60 + start_seconds)*1000
                 stop_time = (stop_minutes*60 + stop_seconds)*1000 
 
-                clip = episode_audio[start_time:stop_time]
+                if (episode_transcript.loc[idx, "Speaker"] == "Sanyam Bhutani") and (stop_time - start_time > 1000):
+                    count += 1
+                    print("Clip Num: ", idx)
+                    clip = episode_audio[start_time:stop_time]
 
-                samples = clip.get_array_of_samples()
-                sample = np.array(samples).astype(np.float32)
+                    samples = clip.get_array_of_samples()
+                    sample = np.array(samples).astype(np.float32)
 
-                yt, _ = librosa.effects.trim(sample)
-                y = yt
-                sr=clip.frame_rate
+                    yt, _ = librosa.effects.trim(sample)
+                    y = yt
+                    sr=clip.frame_rate
 
-                mel_spect = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=100)
-                mel_spect = librosa.power_to_db(mel_spect, ref=np.max)
+                    mel_spect = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=1024, hop_length=100)
+                    mel_spect = librosa.power_to_db(mel_spect, ref=np.max)
 
-                fig = librosa.display.specshow(mel_spect, fmax=20000)
-            
-                plt.savefig(fig_save_path, bbox_inches='tight', pad_inches=0.0)
-                print("File saved to: {}".format(fig_save_path))
+                    librosa.display.specshow(mel_spect, fmax=20000)
+                    plt.savefig(fig_save_path, bbox_inches='tight', pad_inches=0.0)
+                    plt.cla() # to speed up saving
+                    print("File saved to: {}".format(fig_save_path))
+                    print("Time to save clip: ", time.time() - clip_time)
+                    
+        print("Time per audio: ", time.time() - total_time)
+        print("Total Clip Count: ", count)
+
 
 
 if __name__ == "__main__":
@@ -69,7 +81,7 @@ if __name__ == "__main__":
     
     # sample call
     # python extract_audio_segments.py -p /notebooks/storage/ctds_data/audio_files/ -s /notebooks/storage/ctds_data/audio_files/audio_files_segments/
-    # data path = "/notebooks/storage/ctds_data/Cleaned Subtitles/
+    # data path = "/notebooks/storage/ctds_data/Cleaned Subtitles/"
     
     ip_path = args["path"]
     save_path = args["save"]
